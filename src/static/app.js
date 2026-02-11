@@ -21,7 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const spotsLeft = details.max_participants - details.participants.length;
 
         const participantsList = details.participants.length > 0
-          ? details.participants.map(p => `<li>${p}</li>`).join('')
+          ? details.participants.map(p => `<li><span class="participant-name">${p}</span><button class="delete-participant" data-activity="${encodeURIComponent(name)}" data-participant="${encodeURIComponent(p)}" aria-label="Remove participant">×</button></li>`).join('')
           : '<li><em>No participants yet</em></li>';
 
         activityCard.innerHTML = `
@@ -45,9 +45,42 @@ document.addEventListener("DOMContentLoaded", () => {
         option.textContent = name;
         activitySelect.appendChild(option);
       });
+
+      // Add event delegation for delete buttons
+      activitiesList.addEventListener('click', handleDeleteParticipant);
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
+    }
+  }
+
+  // Handle participant deletion
+  async function handleDeleteParticipant(event) {
+    if (event.target.classList.contains('delete-participant')) {
+      const button = event.target;
+      const activity = decodeURIComponent(button.dataset.activity);
+      const participant = decodeURIComponent(button.dataset.participant);
+
+      try {
+        const response = await fetch(
+          `/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(participant)}`,
+          {
+            method: "POST",
+          }
+        );
+
+        if (response.ok) {
+          // Remove the participant from the UI
+          button.closest('li').remove();
+          fetchActivities();
+        } else {
+          const result = await response.json();
+          alert(result.detail || "Failed to remove participant");
+        }
+      } catch (error) {
+        alert("Failed to remove participant. Please try again.");
+        console.error("Error removing participant:", error);
+      }
     }
   }
 
